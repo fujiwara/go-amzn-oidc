@@ -1,6 +1,7 @@
 package validator_test
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -68,11 +69,11 @@ func TestValidate(t *testing.T) {
 	gen := func(token *jwt.Token) (string, error) {
 		return sv.URL, nil
 	}
-
+	ctx := context.Background()
 	for _, ts := range keyURLTests {
 		data, _ := ts.Token.SignedString(privateKey)
 		t.Log("data", data)
-		token, err := validator.ValidateWithKeyURLGenerator(data, gen)
+		token, err := validator.ValidateWithKeyURLGenerator(ctx, data, gen)
 		if err != nil {
 			t.Error("validate failed", err)
 		}
