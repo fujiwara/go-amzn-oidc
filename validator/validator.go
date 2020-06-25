@@ -15,7 +15,8 @@ import (
 	"github.com/shogo82148/go-retry"
 )
 
-var retryPolicy = retry.Policy{
+// RetryPolicy represents a policy for retrying http request to key URL.
+var RetryPolicy = retry.Policy{
 	MinDelay: 500 * time.Millisecond,
 	MaxDelay: 3 * time.Second,
 	MaxCount: 10,
@@ -44,7 +45,7 @@ func validateWithKeyURLGenerator(ctx context.Context, data string, gen keyURLGen
 			return nil, err
 		}
 		var publicKey *ecdsa.PublicKey
-		err = retryPolicy.Do(ctx, func() error {
+		err = RetryPolicy.Do(ctx, func() error {
 			publicKey, err = fetchPublicKey(ctx, keyURL)
 			return err
 		})
