@@ -14,16 +14,24 @@ import (
 
 var publicKeysCache = &sync.Map{}
 
-// Validate validates x-amzn-oidc-data JWT string
+type keyURLGenerator func(*jwt.Token) (string, error)
+
+// Validate validates x-amzn-oidc-data as JWT
 func Validate(data string) (*jwt.Token, error) {
-	return jwt.Parse(data, fetchPublicKey)
+	return validateWithKeyURLGenerator(data, publicKeyURL)
 }
 
-func fetchPublicKey(token *jwt.Token) (interface{}, error) {
-	keyURL, err := publicKeyURL(token)
-	if err != nil {
-		return nil, err
-	}
+func validateWithKeyURLGenerator(data string, gen keyURLGenerator) (*jwt.Token, error) {
+	return jwt.Parse(data, func(token *jwt.Token) (interface{}, error) {
+		keyURL, err := gen(token)
+		if err != nil {
+			return nil, err
+		}
+		return fetchPublicKey(keyURL)
+	})
+}
+
+func fetchPublicKey(keyURL string) (*ecdsa.PublicKey, error) {
 	if key, ok := publicKeysCache.Load(keyURL); ok {
 		return key.(*ecdsa.PublicKey), nil
 	}
@@ -46,14 +54,7 @@ func fetchPublicKey(token *jwt.Token) (interface{}, error) {
 	return publicKey, nil
 }
 
-func arnToRegion(arn string) string {
-	parts := strings.Split(arn, ":")
-	if len(parts) < 4 {
-		return ""
-	}
-	return parts[3]
-}
-
+// https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html#user-claims-encoding
 func publicKeyURL(token *jwt.Token) (string, error) {
 	_arn, ok := token.Header["signer"]
 	if !ok {
@@ -73,9 +74,25 @@ func publicKeyURL(token *jwt.Token) (string, error) {
 		return "", errors.New("no signer string in token header")
 	}
 
-	region := arnToRegion(arn)
-	if region == "" {
-		return "", errors.Errorf("no region found in singer %s", arn)
+	parts := strings.Split(arn, ":")
+	if len(parts) < 4 {
+		return "", errors.Errorf("invalid arn format %s", arn)
 	}
-	return fmt.Sprintf("https://public-keys.auth.elb.%s.amazonaws.com/%s", region, kid), nil
+	partition, region := parts[1], parts[3]
+	switch partition {
+	case "aws":
+		return fmt.Sprintf(
+			"https://public-keys.auth.elb.%s.amazonaws.com/%s",
+			region,
+			kid,
+		), nil
+	case "aws-us-gov":
+		return fmt.Sprintf(
+			"https://s3-%s.amazonaws.com/aws-elb-public-keys-prod-%s/%s",
+			region,
+			region,
+			kid,
+		), nil
+	}
+	return "", errors.Errorf("unsupported arn partition %s", arn)
 }
