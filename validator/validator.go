@@ -80,24 +80,30 @@ func fetchPublicKey(ctx context.Context, keyURL string) (*ecdsa.PublicKey, error
 	return publicKey, nil
 }
 
+func headerString(token *jwt.Token, name string) (string, error) {
+	_v, ok := token.Header[name]
+	if !ok {
+		return "", errors.Errorf("no %s in token header", name)
+	}
+	v, ok := _v.(string)
+	if !ok {
+		return "", errors.Errorf("no %s string in token header", name)
+	}
+	return v, nil
+}
+
 // https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html#user-claims-encoding
 func publicKeyURL(token *jwt.Token) (string, error) {
-	_arn, ok := token.Header["signer"]
-	if !ok {
-		return "", errors.New("no signer in token header")
+	arn, err := headerString(token, "signer")
+	if err != nil {
+		return "", err
 	}
-	arn, ok := _arn.(string)
-	if !ok {
-		return "", errors.New("no signer string in token header")
+	kid, err := headerString(token, "kid")
+	if err != nil {
+		return "", err
 	}
-
-	_kid, ok := token.Header["kid"]
-	if !ok {
-		return "", errors.New("no kid in token header")
-	}
-	kid, ok := _kid.(string)
-	if !ok {
-		return "", errors.New("no signer string in token header")
+	if alg, _ := headerString(token, "alg"); alg != "ES256" {
+		return "", errors.New("alg must be ES256")
 	}
 
 	parts := strings.Split(arn, ":")
