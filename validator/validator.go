@@ -28,18 +28,25 @@ var client = &http.Client{}
 
 type keyURLGenerator func(*jwt.Token) (string, error)
 
+type Claims map[string]interface{}
+
+func (c *Claims) Valid() error {
+	return nil
+}
+
 // Validate validates x-amzn-oidc-data as JWT
-func Validate(data string) (*jwt.Token, error) {
+func Validate(data string) (Claims, error) {
 	return ValidateWithContext(context.Background(), data)
 }
 
 // ValidateWithContext validates x-amzn-oidc-data as JWT with context
-func ValidateWithContext(ctx context.Context, data string) (*jwt.Token, error) {
+func ValidateWithContext(ctx context.Context, data string) (Claims, error) {
 	return validateWithKeyURLGenerator(ctx, data, publicKeyURL)
 }
 
-func validateWithKeyURLGenerator(ctx context.Context, data string, gen keyURLGenerator) (*jwt.Token, error) {
-	return jwt.Parse(data, func(token *jwt.Token) (interface{}, error) {
+func validateWithKeyURLGenerator(ctx context.Context, data string, gen keyURLGenerator) (Claims, error) {
+	claims := make(Claims, 0)
+	_, err := jwt.ParseWithClaims(data, &claims, func(token *jwt.Token) (interface{}, error) {
 		keyURL, err := gen(token)
 		if err != nil {
 			return nil, err
@@ -51,6 +58,10 @@ func validateWithKeyURLGenerator(ctx context.Context, data string, gen keyURLGen
 		})
 		return publicKey, err
 	})
+	if err != nil {
+		return nil, err
+	}
+	return claims, nil
 }
 
 func fetchPublicKey(ctx context.Context, keyURL string) (*ecdsa.PublicKey, error) {

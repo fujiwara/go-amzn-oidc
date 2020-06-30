@@ -21,13 +21,13 @@ import (
 )
 
 func handlerFunc(w http.ResponseWriter, r *http.Request) {
-	token, err := validator.Validate(r.Header.Get("x-amzn-oidc-data"))
+	claims, err := validator.Validate(r.Header.Get("x-amzn-oidc-data"))
 	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprintln(w, "validation error", err.Error())
 		return
 	}
-	email := token.Claims.(jwt.MapClaims)["email"]
+	email := claims["email"]
 	fmt.Fprintln(w, email)
 }
 

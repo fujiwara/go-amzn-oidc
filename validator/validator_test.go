@@ -73,14 +73,14 @@ func TestValidate(t *testing.T) {
 	for _, ts := range keyURLTests {
 		data, _ := ts.Token.SignedString(privateKey)
 		t.Log("data", data)
-		token, err := validator.ValidateWithKeyURLGenerator(ctx, data, gen)
+		claims, err := validator.ValidateWithKeyURLGenerator(ctx, data, gen)
 		if err != nil {
 			t.Error("validate failed", err)
 		}
-		if !token.Valid {
+		if claims.Valid() != nil {
 			t.Error("token is not valid")
 		}
-		t.Logf("validated %#v", token)
+		t.Logf("validated %#v", claims)
 	}
 }
 
