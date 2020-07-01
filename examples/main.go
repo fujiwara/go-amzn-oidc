@@ -15,8 +15,7 @@ func handlerFunc(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "validation error", err.Error())
 		return
 	}
-	email := claims["email"]
-	fmt.Fprintln(w, email)
+	fmt.Fprintln(w, claims.Email())
 }
 
 func main() {
