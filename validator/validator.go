@@ -28,12 +28,6 @@ var client = &http.Client{}
 
 type keyURLGenerator func(*jwt.Token) (string, error)
 
-type Claims map[string]interface{}
-
-func (c *Claims) Valid() error {
-	return nil
-}
-
 // Validate validates x-amzn-oidc-data as JWT
 func Validate(data string) (Claims, error) {
 	return ValidateWithContext(context.Background(), data)

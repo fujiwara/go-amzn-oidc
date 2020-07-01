@@ -80,13 +80,25 @@ func TestValidate(t *testing.T) {
 		if claims.Valid() != nil {
 			t.Error("token is not valid")
 		}
+		if claims.Email() != "foo@example.com" {
+			t.Error("unexpected email", claims.Email())
+		}
+		if claims.UpdatedAt() != 1593592790 {
+			t.Error("unexpected updated_at", claims.UpdatedAt())
+		}
+		if !claims.EmailVerified() {
+			t.Error("unexpected email_verified", claims.EmailVerified())
+		}
 		t.Logf("validated %#v", claims)
 	}
 }
 
 func newToken(arn, kid string) *jwt.Token {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
-		"foo": "bar",
+		"foo":            "bar",
+		"email":          "foo@example.com",
+		"updated_at":     1593592790,
+		"email_verified": true,
 	})
 	token.Header["signer"] = arn
 	token.Header["kid"] = kid
