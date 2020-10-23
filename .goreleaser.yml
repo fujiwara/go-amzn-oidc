@@ -5,6 +5,7 @@ builds:
   - env:
       - CGO_ENABLED=0
     main: ./cmd/amzn-oidc-validate-server/main.go
+    binary: amzn-oidc-validate-server
     goarch:
       - darwin
       - amd64
