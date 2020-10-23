@@ -6,7 +6,7 @@
 
 go-amzn-oidc is a validator for x-amzn-oidc-data as JWT.
 
-## Usage
+## Usage as a library
 
 ```go
 package main
@@ -33,6 +33,31 @@ func handlerFunc(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", handlerFunc)
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+## With nginx auth_request
+
+```console
+$ amzn-oidc-validate-server
+2020/10/24 01:50:06 [info] Listening 127.0.0.1:8080
+```
+
+nginx.conf
+```conf
+location = /oidc_validate {
+	proxy_pass http://127.0.0.1:8080;
+	proxy_set_header X-Amzn-OIDC-Data $http_x_amzn_oidc_data;
+	proxy_set_header Content-Length "";
+	proxy_pass_request_body off;
+	internal;
+}
+
+location / {
+	auth_request /oidc_validate;
+	auth_request_set $email $upstream_http_x_auth_request_email;
+	proxy_set_header X-Email $email;
+	# ...
 }
 ```
 
