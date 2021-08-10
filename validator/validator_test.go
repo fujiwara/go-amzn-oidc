@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/fujiwara/go-amzn-oidc/validator"
+	"github.com/golang-jwt/jwt"
 )
 
 var privateKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
