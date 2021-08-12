@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/fujiwara/go-amzn-oidc/validator"
+	"github.com/golang-jwt/jwt"
 )
 
 func TestHTTPHandlerFunc(t *testing.T) {
