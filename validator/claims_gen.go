@@ -229,12 +229,12 @@ func (c Claims) UpdatedAt() float64 {
 	return value
 }
 
-func (c Claims) Exp() int64 {
+func (c Claims) Exp() float64 {
 	_value, ok := c["exp"]
 	if !ok {
 		return 0
 	}
-	value, ok := _value.(int64)
+	value, ok := _value.(float64)
 	if !ok {
 		return 0
 	}
