@@ -57,6 +57,12 @@ var keyURLTests = []struct {
 	},
 }
 
+var expiredToken = newToken(
+	"arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test/d74f8c34849f8790",
+	"cca216b2-6fd4-4953-92d4-ec232ffb9891",
+	time.Now().Unix()-60,
+)
+
 func TestPublicKeyURL(t *testing.T) {
 	for _, ts := range keyURLTests {
 		t.Logf("token: %#v", ts.Token)
@@ -94,6 +100,22 @@ func TestValidate(t *testing.T) {
 		}
 		t.Logf("validated %#v", claims)
 	}
+}
+
+func TestExpiration(t *testing.T) {
+	sv := httptest.NewServer(http.HandlerFunc(keyHandlerFunc))
+	defer sv.Close()
+	gen := func(token *jwt.Token) (string, error) {
+		return sv.URL, nil
+	}
+	ctx := context.Background()
+	data, _ := expiredToken.SignedString(privateKey)
+	t.Log("data", data)
+	claims, err := validator.ValidateWithKeyURLGenerator(ctx, data, gen)
+	if err == nil {
+		t.Error("check failed")
+	}
+	t.Logf("validated %#v", claims)
 }
 
 func newToken(arn, kid string, exp int64) *jwt.Token {
