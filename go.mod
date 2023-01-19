@@ -3,7 +3,7 @@ module github.com/fujiwara/go-amzn-oidc
 go 1.14
 
 require (
-	github.com/golang-jwt/jwt v3.2.1+incompatible
+	github.com/golang-jwt/jwt/v4 v4.4.3
 	github.com/hashicorp/logutils v1.0.0
 	github.com/onsi/ginkgo v1.14.2 // indirect
 	github.com/onsi/gomega v1.10.3 // indirect

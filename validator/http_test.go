@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/fujiwara/go-amzn-oidc/validator"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 func TestHTTPHandlerFunc(t *testing.T) {
