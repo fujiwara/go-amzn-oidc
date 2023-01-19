@@ -10,10 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/pkg/errors"
 	"github.com/shogo82148/go-retry"
 )
+
+func init() {
+	jwt.DecodePaddingAllowed = true
+}
 
 // RetryPolicy represents a policy for retrying http request to key URL.
 var RetryPolicy = retry.Policy{
