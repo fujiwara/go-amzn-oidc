@@ -4,14 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/pkg/errors"
 	"github.com/shogo82148/go-retry"
 )
 
@@ -69,20 +68,20 @@ func fetchPublicKey(ctx context.Context, keyURL string) (*ecdsa.PublicKey, error
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, keyURL, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to new GET request for %s", keyURL)
+		return nil, fmt.Errorf("failed to new GET request for %s: %w", keyURL, err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get public key from %s", keyURL)
+		return nil, fmt.Errorf("failed to get public key from %s: %w", keyURL, err)
 	}
 	defer resp.Body.Close()
-	pem, err := ioutil.ReadAll(resp.Body)
+	pem, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get public key from %s", keyURL)
+		return nil, fmt.Errorf("failed to get public key from %s: %w", keyURL, err)
 	}
 	publicKey, err := jwt.ParseECPublicKeyFromPEM(pem)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse public key from %s", keyURL)
+		return nil, fmt.Errorf("failed to parse public key from %s: %w", keyURL, err)
 	}
 	publicKeysCache.Store(keyURL, publicKey)
 
@@ -92,11 +91,11 @@ func fetchPublicKey(ctx context.Context, keyURL string) (*ecdsa.PublicKey, error
 func headerString(token *jwt.Token, name string) (string, error) {
 	_v, ok := token.Header[name]
 	if !ok {
-		return "", errors.Errorf("no %s in token header", name)
+		return "", fmt.Errorf("no %s in token header", name)
 	}
 	v, ok := _v.(string)
 	if !ok {
-		return "", errors.Errorf("no %s string in token header", name)
+		return "", fmt.Errorf("no %s string in token header", name)
 	}
 	return v, nil
 }
@@ -112,12 +111,12 @@ func publicKeyURL(token *jwt.Token) (string, error) {
 		return "", err
 	}
 	if alg, _ := headerString(token, "alg"); alg != "ES256" {
-		return "", errors.New("alg must be ES256")
+		return "", fmt.Errorf("alg must be ES256")
 	}
 
 	parts := strings.Split(arn, ":")
 	if len(parts) < 4 {
-		return "", errors.Errorf("invalid arn format %s", arn)
+		return "", fmt.Errorf("invalid arn format %s", arn)
 	}
 	partition, region := parts[1], parts[3]
 	switch partition {
@@ -135,5 +134,5 @@ func publicKeyURL(token *jwt.Token) (string, error) {
 			kid,
 		), nil
 	}
-	return "", errors.Errorf("unsupported arn partition %s", arn)
+	return "", fmt.Errorf("unsupported arn partition %s", arn)
 }
