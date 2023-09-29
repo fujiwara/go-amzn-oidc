@@ -17,7 +17,7 @@ func NewHTTPHandlerFunc(timeout time.Duration) func(w http.ResponseWriter, r *ht
 
 func newHTTPHandlerFuncWithKeyURLGenerator(gen func(token *jwt.Token) (string, error), timeout time.Duration) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 		data := r.Header.Get("x-amzn-oidc-data")
 		claims, err := validateWithKeyURLGenerator(ctx, data, gen)
