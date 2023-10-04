@@ -34,6 +34,7 @@ var claimFields = map[string][]string{
 	},
 	"float64": {
 		"updated_at",
+		"exp",
 	},
 	"bool": {
 		"email_verified",

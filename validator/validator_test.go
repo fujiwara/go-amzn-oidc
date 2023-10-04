@@ -35,6 +35,7 @@ var keyURLTests = []struct {
 		Token: newToken(
 			"arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test/d74f8c34849f8790",
 			"cca216b2-6fd4-4953-92d4-ec232ffb9891",
+			time.Now().Unix()+60,
 		),
 		URL: "https://public-keys.auth.elb.us-east-1.amazonaws.com/cca216b2-6fd4-4953-92d4-ec232ffb9891",
 	},
@@ -42,6 +43,7 @@ var keyURLTests = []struct {
 		Token: newToken(
 			"arn:aws:elasticloadbalancing:ap-northeast-1:123456789012:loadbalancer/app/test/d74f8c34849f8790",
 			"6db77464-4ac6-4968-9ec9-a6c669649ba1",
+			time.Now().Unix()+60,
 		),
 		URL: "https://public-keys.auth.elb.ap-northeast-1.amazonaws.com/6db77464-4ac6-4968-9ec9-a6c669649ba1",
 	},
@@ -49,10 +51,17 @@ var keyURLTests = []struct {
 		Token: newToken(
 			"arn:aws-us-gov:elasticloadbalancing:us-gov-east-1:123456789012:loadbalancer/app/test/d74f8c34849f8790",
 			"d39846c3-18d4-4c5e-8148-27a63a4fa6d8",
+			time.Now().Unix()+60,
 		),
 		URL: "https://s3-us-gov-east-1.amazonaws.com/aws-elb-public-keys-prod-us-gov-east-1/d39846c3-18d4-4c5e-8148-27a63a4fa6d8",
 	},
 }
+
+var expiredToken = newToken(
+	"arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test/d74f8c34849f8790",
+	"cca216b2-6fd4-4953-92d4-ec232ffb9891",
+	time.Now().Unix()-60,
+)
 
 func TestPublicKeyURL(t *testing.T) {
 	for _, ts := range keyURLTests {
@@ -93,15 +102,32 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func newToken(arn, kid string) *jwt.Token {
+func TestExpiration(t *testing.T) {
+	sv := httptest.NewServer(http.HandlerFunc(keyHandlerFunc))
+	defer sv.Close()
+	gen := func(token *jwt.Token) (string, error) {
+		return sv.URL, nil
+	}
+	ctx := context.Background()
+	data, _ := expiredToken.SignedString(privateKey)
+	t.Log("data", data)
+	claims, err := validator.ValidateWithKeyURLGenerator(ctx, data, gen)
+	if err == nil {
+		t.Error("check failed")
+	}
+	t.Logf("validated %#v", claims)
+}
+
+func newToken(arn, kid string, exp int64) *jwt.Token {
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
 		"foo":            "bar",
 		"email":          "foo@example.com",
 		"updated_at":     1593592790,
 		"email_verified": true,
+		"exp":            exp,
 	})
 	token.Header["signer"] = arn
 	token.Header["kid"] = kid
-	token.Header["exp"] = time.Now().Unix() + 60
+	token.Header["exp"] = exp
 	return token
 }
