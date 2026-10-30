@@ -1,7 +1,6 @@
 package validator_test
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -14,9 +13,7 @@ func TestRealJWT(t *testing.T) {
 	if _, err := os.Stat(testJWT); err != nil {
 		t.Skipf("%s is not found", testJWT)
 	}
-	f, _ := os.Open(testJWT)
-	b, _ := ioutil.ReadAll(f)
-	f.Close()
+	b, _ := os.ReadFile(testJWT)
 
 	token := strings.TrimSpace(string(b))
 	t.Log(token)

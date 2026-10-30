@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/fujiwara/go-amzn-oidc/validator"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var privateKey, _ = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -104,4 +104,45 @@ func newToken(arn, kid string) *jwt.Token {
 	token.Header["kid"] = kid
 	token.Header["exp"] = time.Now().Unix() + 60
 	return token
+}
+
+func TestValidateWithoutClaimsValidation(t *testing.T) {
+	sv := httptest.NewServer(http.HandlerFunc(keyHandlerFunc))
+	defer sv.Close()
+	gen := func(token *jwt.Token) (string, error) {
+		return sv.URL, nil
+	}
+	// claims validation (exp, nbf, iat) is not performed, as same as before.
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
+		"sub": "foo",
+		"iss": "https://example.com",
+		"exp": time.Now().Add(-time.Hour).Unix(),
+	})
+	data, _ := token.SignedString(privateKey)
+	claims, err := validator.ValidateWithKeyURLGenerator(context.Background(), data, gen)
+	if err != nil {
+		t.Fatal("validate failed", err)
+	}
+	if sub, err := claims.GetSubject(); err != nil || sub != "foo" {
+		t.Error("unexpected subject", sub, err)
+	}
+	if iss, err := claims.GetIssuer(); err != nil || iss != "https://example.com" {
+		t.Error("unexpected issuer", iss, err)
+	}
+	if exp, err := claims.GetExpirationTime(); err != nil || exp == nil {
+		t.Error("unexpected expiration time", exp, err)
+	}
+}
+
+func TestValidateInvalidSignature(t *testing.T) {
+	sv := httptest.NewServer(http.HandlerFunc(keyHandlerFunc))
+	defer sv.Close()
+	gen := func(token *jwt.Token) (string, error) {
+		return sv.URL, nil
+	}
+	otherKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	data, _ := keyURLTests[0].Token.SignedString(otherKey)
+	if _, err := validator.ValidateWithKeyURLGenerator(context.Background(), data, gen); err == nil {
+		t.Error("validation must fail with invalid signature")
+	}
 }

@@ -11,4 +11,4 @@ clean:
 	rm -fr cmd/amzn-oidc-validate-server/amzn-oidc-validate-server dist/*
 
 release:
-	goreleaser build --snapshot --rm-dist
+	goreleaser build --snapshot --clean
