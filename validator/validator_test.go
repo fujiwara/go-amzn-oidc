@@ -6,9 +6,12 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -144,5 +147,37 @@ func TestValidateInvalidSignature(t *testing.T) {
 	data, _ := keyURLTests[0].Token.SignedString(otherKey)
 	if _, err := validator.ValidateWithKeyURLGenerator(context.Background(), data, gen); err == nil {
 		t.Error("validation must fail with invalid signature")
+	}
+}
+
+// ALB issues JWTs whose segments are base64url encoded with padding.
+func TestValidatePaddedToken(t *testing.T) {
+	sv := httptest.NewServer(http.HandlerFunc(keyHandlerFunc))
+	defer sv.Close()
+	gen := func(token *jwt.Token) (string, error) {
+		return sv.URL, nil
+	}
+	encode := func(v any) string {
+		b, _ := json.Marshal(v)
+		return base64.URLEncoding.EncodeToString(b)
+	}
+	// "sub" length is chosen so that the header and payload segments need padding.
+	header := encode(map[string]any{"alg": "ES256", "typ": "JWT", "kid": "x"})
+	payload := encode(map[string]any{"sub": "foo", "email": "foo@example.com"})
+	signingString := header + "." + payload
+	sig, err := jwt.SigningMethodES256.Sign(signingString, privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := signingString + "." + base64.URLEncoding.EncodeToString(sig)
+	if !strings.Contains(header+payload, "=") {
+		t.Fatalf("test token must contain padding: %s", data)
+	}
+	claims, err := validator.ValidateWithKeyURLGenerator(context.Background(), data, gen)
+	if err != nil {
+		t.Fatal("validate failed", err)
+	}
+	if claims.Email() != "foo@example.com" {
+		t.Error("unexpected email", claims.Email())
 	}
 }
